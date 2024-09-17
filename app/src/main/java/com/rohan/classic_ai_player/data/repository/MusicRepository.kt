@@ -1,8 +1,8 @@
-package com.rohan.classic_ai_player.data.local.repository
+package com.rohan.classic_ai_player.data.repository
 
 import android.util.Log
-import com.rohan.classic_ai_player.data.local.model.MusicData
-import com.rohan.classic_ai_player.data.local.source.MusicContentResolver
+import com.rohan.classic_ai_player.data.model.MusicData
+import com.rohan.classic_ai_player.data.source.MusicContentResolver
 import com.rohan.classic_ai_player.utils.DataResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

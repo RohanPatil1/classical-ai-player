@@ -1,4 +1,4 @@
-package com.rohan.classic_ai_player.data.local.model
+package com.rohan.classic_ai_player.data.model
 
 import android.net.Uri
 import kotlinx.parcelize.Parcelize

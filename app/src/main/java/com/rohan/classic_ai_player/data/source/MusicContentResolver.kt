@@ -1,4 +1,4 @@
-package com.rohan.classic_ai_player.data.local.source
+package com.rohan.classic_ai_player.data.source
 
 import android.content.ContentUris
 import android.content.Context
@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.WorkerThread
-import com.rohan.classic_ai_player.data.local.model.Music
+import com.rohan.classic_ai_player.data.model.Music
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
