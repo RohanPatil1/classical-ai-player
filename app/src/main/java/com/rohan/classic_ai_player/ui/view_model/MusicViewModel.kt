@@ -38,7 +38,7 @@ private val audioDummy = Music(
 class MusicViewModel @Inject constructor(
     private val musicPlayerHandler: MusicPlayerHandler,
     private val repository: MusicRepository,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     var duration by savedStateHandle.saveable { mutableLongStateOf(0L) }
@@ -186,5 +186,13 @@ class MusicViewModel @Inject constructor(
         val minute = TimeUnit.MINUTES.convert(duration, TimeUnit.MILLISECONDS)
         val seconds = (minute) - minute * TimeUnit.SECONDS.convert(1, TimeUnit.MINUTES)
         return String.format("%02d:%02d", minute, seconds)
+    }
+
+    override fun onCleared() {
+        viewModelScope.launch {
+            musicPlayerHandler.handlePlayerState(PlayerState.Stop)
+        }
+
+        super.onCleared()
     }
 }

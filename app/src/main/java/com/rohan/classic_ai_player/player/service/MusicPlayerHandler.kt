@@ -26,6 +26,11 @@ class MusicPlayerHandler @Inject constructor(
 
     private var job: Job? = null
 
+    init {
+
+        exoPlayer.addListener(this)
+
+    }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
         when (playbackState) {
@@ -52,7 +57,7 @@ class MusicPlayerHandler @Inject constructor(
         _musicStateFlow.value = MusicState.CurrentPlaying(exoPlayer.currentMediaItemIndex)
 
         if (isPlaying) {
-            GlobalScope.launch(Dispatchers.IO) {
+            GlobalScope.launch(Dispatchers.Main) {
                 startProgressUpdate()
             }
         } else {
