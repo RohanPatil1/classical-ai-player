@@ -31,7 +31,7 @@ constructor(@ApplicationContext val context: Context) {
 
 
     @WorkerThread
-    fun getAudioData(): List<Music> {
+    fun fetchMusicList(): List<Music> {
         return getCursorData()
     }
 
@@ -79,12 +79,11 @@ constructor(@ApplicationContext val context: Context) {
 
                         audioList += Music(
                             id = id,
-                            name = displayName,
+                            albumName = "",
+                            songName = displayName,
                             uri = uri,
-                            artist = artist,
                             duration = duration,
-                            metaData = data,
-                            gainRequired = 0f
+                            artistName = artist,
                         )
                     }
 

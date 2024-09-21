@@ -1,7 +1,6 @@
 package com.rohan.classic_ai_player.ui.view_model
 
 import android.annotation.SuppressLint
-import android.net.Uri
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -9,11 +8,12 @@ import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
 import androidx.lifecycle.viewmodel.compose.saveable
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import com.rohan.classic_ai_player.data.model.AudioStats
 import com.rohan.classic_ai_player.data.model.Music
+import com.rohan.classic_ai_player.data.model.Playlist
 import com.rohan.classic_ai_player.data.repository.MusicRepository
 import com.rohan.classic_ai_player.player.service.MusicPlayerHandler
 import com.rohan.classic_ai_player.utils.DataResult
@@ -23,9 +23,11 @@ import com.rohan.classic_ai_player.utils.PlayerUiEvents
 import com.rohan.classic_ai_player.utils.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -195,4 +197,82 @@ class MusicViewModel @Inject constructor(
 
         super.onCleared()
     }
+
+
+    //--------------------------------------------------------------------------------
+
+    init {
+        repository.getAllMusic()
+    }
+
+
+    // State for all music
+    val allMusicList: StateFlow<List<Music>> = repository.getAllMusic()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // State for all playlists
+    val playlists: StateFlow<List<Playlist>> = repository.getAllPlaylists()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    // State for the currently selected music
+    private val _selectedMusic = MutableStateFlow<Music?>(null)
+    val selectedMusic: StateFlow<Music?> = _selectedMusic.asStateFlow()
+
+    // State for the currently selected playlist
+    private val _selectedPlaylist = MutableStateFlow<Playlist?>(null)
+    val selectedPlaylist: StateFlow<Playlist?> = _selectedPlaylist.asStateFlow()
+
+    // Operation state for UI feedback
+    private val _uiState = MutableStateFlow<UIState>(UIState.Idle)
+    val uiState: StateFlow<UIState> = _uiState.asStateFlow()
+
+
+    fun getMusicById(id: Int) {
+        performOperation {
+            val music = repository.getMusicById(id)
+            _selectedMusic.value = music
+        }
+    }
+
+    fun updateAudioStats(id: Int, audioStats: AudioStats) {
+        performOperation {
+            repository.updateAudioStats(id, audioStats)
+            // Refresh the selected music to reflect the changes
+            _selectedMusic.value = repository.getMusicById(id)
+        }
+    }
+
+    fun createPlaylist(playlist: Playlist) {
+        performOperation {
+            repository.createPlaylist(playlist)
+        }
+    }
+
+    fun getPlaylistById(playlistId: Int) {
+        performOperation {
+            val playlist = repository.getPlaylistById(playlistId)
+            _selectedPlaylist.value = playlist
+        }
+    }
+
+
+    private fun performOperation(operation: suspend () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = UIState.Loading
+            try {
+                operation()
+                _uiState.value = UIState.Success
+            } catch (e: Exception) {
+                _uiState.value = UIState.Error(e.message ?: "Unknown error occurred")
+            }
+        }
+    }
+
+    sealed class UIState {
+        object Idle : UIState()
+        object Loading : UIState()
+        object Success : UIState()
+        data class Error(val message: String) : UIState()
+    }
+
 }

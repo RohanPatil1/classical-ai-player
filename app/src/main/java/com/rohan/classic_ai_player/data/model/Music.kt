@@ -3,15 +3,35 @@ package com.rohan.classic_ai_player.data.model
 import android.net.Uri
 import kotlinx.parcelize.Parcelize
 import android.os.Parcelable
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 
 
-@Parcelize
+//@Parcelize
+//data class Music(
+//    val id: Long,
+//    val name: String,
+//    val uri: Uri,
+//    val artist: String,
+//    val metaData: String,
+//    val duration: Int,
+//    val gainRequired: Float
+//) : Parcelable
+
+
+@Entity(tableName = "music_table")
 data class Music(
-    val id: Long,
-    val name: String,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val uri: Uri,
-    val artist: String,
-    val metaData: String,
+    val artistName: String?,
+    val songName: String?,
+    val albumName: String?,
     val duration: Int,
-    val gainRequired: Float
-) : Parcelable
+    val audioStats: AudioStats? = null,
+)
+
+data class AudioStats(
+    val integratedLoudness: Float,
+    val loudnessRange: Float,
+    val truePeak: Float,
+)
