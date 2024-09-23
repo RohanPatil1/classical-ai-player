@@ -50,10 +50,6 @@ object MediaModule {
         exoPlayer = player
     )
 
-    @Provides
-    @Singleton
-    fun provideMusicPlayerHandler(exoPlayer: ExoPlayer): MusicPlayerHandler =
-        MusicPlayerHandler(exoPlayer)
 
     @Provides
     @Singleton

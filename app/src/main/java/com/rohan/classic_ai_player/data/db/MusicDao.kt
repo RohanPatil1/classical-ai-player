@@ -18,8 +18,8 @@ interface MusicDao {
     fun getAllMusic(): Flow<List<Music>>
 
     @Query("SELECT * FROM music_table WHERE id = :id LIMIT 1")
-    suspend fun getMusicById(id: Int): Music?
+    suspend fun getMusicById(id: Long): Music?
 
     @Query("UPDATE music_table SET audioStats = :audioStats WHERE id = :id")
-    suspend fun updateAudioStats(id: Int, audioStats: AudioStats)
+    suspend fun updateAudioStats(id: Long, audioStats: AudioStats)
 }

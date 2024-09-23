@@ -1,5 +1,6 @@
 package com.rohan.classic_ai_player.data.model
 
+import android.net.Uri
 import androidx.room.TypeConverter
 import com.google.gson.Gson
 
@@ -13,6 +14,17 @@ class Converters {
     @TypeConverter
     fun toAudioStats(audioStatsString: String?): AudioStats? {
         return audioStatsString?.let { Gson().fromJson(it, AudioStats::class.java) }
+    }
+
+    // Converter for Uri
+    @TypeConverter
+    fun fromUri(uri: Uri?): String? {
+        return uri?.toString()
+    }
+
+    @TypeConverter
+    fun toUri(uriString: String?): Uri? {
+        return uriString?.let { Uri.parse(it) }
     }
 
     @TypeConverter

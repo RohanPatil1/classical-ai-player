@@ -1,8 +1,6 @@
 package com.rohan.classic_ai_player.data.model
 
 import android.net.Uri
-import kotlinx.parcelize.Parcelize
-import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 

@@ -79,7 +79,7 @@ constructor(@ApplicationContext val context: Context) {
 
                         audioList += Music(
                             id = id,
-                            albumName = "",
+                            albumName = data,
                             songName = displayName,
                             uri = uri,
                             duration = duration,

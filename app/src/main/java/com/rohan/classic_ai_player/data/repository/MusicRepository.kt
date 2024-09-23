@@ -1,20 +1,15 @@
 package com.rohan.classic_ai_player.data.repository
 
-import android.util.Log
 import com.rohan.classic_ai_player.data.db.MusicDao
 import com.rohan.classic_ai_player.data.db.PlaylistDao
 import com.rohan.classic_ai_player.data.model.AudioStats
 import com.rohan.classic_ai_player.data.model.Music
-import com.rohan.classic_ai_player.data.model.MusicData
 import com.rohan.classic_ai_player.data.model.Playlist
 import com.rohan.classic_ai_player.data.source.MusicContentResolver
-import com.rohan.classic_ai_player.utils.DataResult
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 class MusicRepository @Inject constructor(
@@ -51,9 +46,9 @@ class MusicRepository @Inject constructor(
 
     private suspend fun insertAll(musicList: List<Music>) = musicDao.insertAll(musicList)
 
-    suspend fun getMusicById(id: Int): Music? = musicDao.getMusicById(id)
+    suspend fun getMusicById(id: Long): Music? = musicDao.getMusicById(id)
 
-    suspend fun updateAudioStats(id: Int, audioStats: AudioStats) =
+    suspend fun updateAudioStats(id: Long, audioStats: AudioStats) =
         musicDao.updateAudioStats(id, audioStats)
 
     fun getAllPlaylists(): Flow<List<Playlist>> = playlistDao.getAllPlaylists()
