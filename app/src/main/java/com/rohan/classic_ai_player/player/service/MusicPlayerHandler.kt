@@ -1,8 +1,11 @@
 package com.rohan.classic_ai_player.player.service
 
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import com.rohan.classic_ai_player.data.model.Music
+import com.rohan.classic_ai_player.utils.PlayerState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,10 +35,51 @@ class MusicPlayerHandler(
         exoPlayer.addListener(this)
     }
 
-    fun setPlaylist(mediaItems: List<MediaItem>) {
-        _playlist.value = mediaItems
-        exoPlayer.setMediaItems(mediaItems)
+
+    fun playMusic(music: Music) {
+        val mediaItem = music.toMediaItem()
+        exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
+
+        play()
+    }
+
+    private fun Music.toMediaItem() = MediaItem.Builder()
+        .setUri(this.contentUri)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setAlbumArtist(this.artistName)
+                .setDisplayTitle(this.songName)
+                .setSubtitle(this.albumName)
+                .build()
+        )
+        .setMediaId(this.musicId.toString())
+        .build()
+
+
+    fun prepareMusicToPlayList(musicList: List<Music>): List<MediaItem> {
+        if (musicList.isNotEmpty()) {
+            val mediaItems = musicList.map { music ->
+                MediaItem.Builder()
+                    .setUri(music.contentUri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setAlbumArtist(music.artistName)
+                            .setDisplayTitle(music.songName)
+                            .setSubtitle(music.albumName)
+                            .build()
+                    )
+                    .setMediaId(music.musicId.toString())
+                    .build()
+            }
+            _playlist.value = mediaItems
+            exoPlayer.setMediaItems(mediaItems)
+            exoPlayer.prepare()
+
+            return mediaItems
+        }
+
+        return emptyList()
     }
 
     fun play() {

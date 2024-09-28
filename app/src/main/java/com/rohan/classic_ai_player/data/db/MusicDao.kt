@@ -7,7 +7,6 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.rohan.classic_ai_player.data.model.AudioStats
 import com.rohan.classic_ai_player.data.model.Music
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MusicDao {
@@ -15,11 +14,11 @@ interface MusicDao {
     suspend fun insertAll(musicList: List<Music>)
 
     @Query("SELECT * FROM music_table")
-    fun getAllMusic(): Flow<List<Music>>
+    fun getAllMusic(): List<Music>?
 
-    @Query("SELECT * FROM music_table WHERE id = :id LIMIT 1")
+    @Query("SELECT * FROM music_table WHERE musicId = :id LIMIT 1")
     suspend fun getMusicById(id: Long): Music?
 
-    @Query("UPDATE music_table SET audioStats = :audioStats WHERE id = :id")
+    @Query("UPDATE music_table SET audioStats = :audioStats WHERE musicId = :id")
     suspend fun updateAudioStats(id: Long, audioStats: AudioStats)
 }

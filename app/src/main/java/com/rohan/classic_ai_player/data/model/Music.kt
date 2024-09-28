@@ -19,11 +19,11 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "music_table")
 data class Music(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val uri: Uri,
-    val artistName: String?,
-    val songName: String?,
-    val albumName: String?,
+    @PrimaryKey(autoGenerate = true) val musicId: Long = 0,
+    val contentUri: Uri,
+    val artistName: String,
+    val songName: String,
+    val albumName: String,
     val duration: Int,
     val audioStats: AudioStats? = null,
 )

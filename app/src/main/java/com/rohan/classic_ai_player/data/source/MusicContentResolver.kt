@@ -78,10 +78,10 @@ constructor(@ApplicationContext val context: Context) {
                         )
 
                         audioList += Music(
-                            id = id,
+                            musicId = id,
                             albumName = data,
                             songName = displayName,
-                            uri = uri,
+                            contentUri = uri,
                             duration = duration,
                             artistName = artist,
                         )
@@ -96,5 +96,23 @@ constructor(@ApplicationContext val context: Context) {
         return audioList
     }
 
+//    @WorkerThread
+//    fun getAlbumArt(context: Context, uri: Uri): Bitmap?{
+//        val mmr = MediaMetadataRetriever()
+//        mmr.setDataSource(context, uri)
+//        val bitmap: Bitmap? = try{
+//            val data = mmr.embeddedPicture
+//            if (data != null){
+//                BitmapFactory.decodeByteArray(data, 0, data.size)
+//            } else{
+//                null
+//            }
+//        } catch (exp: Exception){
+//            null
+//        } finally {
+//            mmr.release()
+//        }
+//        return bitmap
+//    }
 
 }

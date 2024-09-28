@@ -40,4 +40,20 @@ class Converters {
             data.split(",").map { it.toInt() }
         }
     }
+//
+//    @TypeConverter
+//    fun fromBitmap(bitmap: Bitmap?): ByteArray? {
+//        return bitmap?.let {
+//            val outputStream = ByteArrayOutputStream()
+//            it.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+//            outputStream.toByteArray()
+//        }
+//    }
+//
+//    @TypeConverter
+//    fun toBitmap(byteArray: ByteArray?): Bitmap? {
+//        return byteArray?.let {
+//            BitmapFactory.decodeByteArray(it, 0, it.size)
+//        }
+//    }
 }

@@ -54,6 +54,7 @@ android {
 
 dependencies {
 
+
     val lifecycle_version = "2.8.5"
 
     implementation("androidx.core:core-ktx:1.13.1")
@@ -101,6 +102,7 @@ dependencies {
 
     // LiveData
     implementation("androidx.lifecycle:lifecycle-runtime-compose:$lifecycle_version")
+    implementation("androidx.compose.runtime:runtime-livedata:1.7.2")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
