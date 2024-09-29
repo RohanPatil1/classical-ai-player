@@ -4,97 +4,90 @@ import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
 import android.provider.MediaStore
-import android.util.Log
-import androidx.annotation.WorkerThread
 import com.rohan.classic_ai_player.data.model.Music
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 
-class MusicContentResolver @Inject
-constructor(@ApplicationContext val context: Context) {
-    private var mCursor: Cursor? = null
+class ContentResolver @Inject constructor(
+    @ApplicationContext private val context: Context,
+) {
+    private val musicList = MutableStateFlow(mutableListOf<Music>())
+    private var cursor: Cursor? = null
 
-    private val projection: Array<String> = arrayOf(
+
+    private val projection = arrayOf(
         MediaStore.Audio.AudioColumns.DISPLAY_NAME,
-        MediaStore.Audio.AudioColumns._ID,
-        MediaStore.Audio.AudioColumns.ARTIST,
-        MediaStore.Audio.AudioColumns.DATA,
-        MediaStore.Audio.AudioColumns.DURATION,
         MediaStore.Audio.AudioColumns.TITLE,
+        MediaStore.Audio.AudioColumns.DURATION,
+        MediaStore.Audio.AudioColumns.ARTIST,
+        MediaStore.Audio.AudioColumns._ID,
+        MediaStore.Audio.AudioColumns.ALBUM_ID,
+        MediaStore.Audio.AudioColumns.DISPLAY_NAME,
     )
 
-    private var selectionClause: String? =
-        "${MediaStore.Audio.AudioColumns.IS_MUSIC} = ? AND ${MediaStore.Audio.Media.MIME_TYPE} NOT IN (?, ?, ?)"
-    private var selectionArg = arrayOf("1", "audio/amr", "audio/3gpp", "audio/aac")
-
+    private val selectionClaus = "${MediaStore.Audio.Media.IS_MUSIC} = ?"
+    private val selectionArg = arrayOf("1")
     private val sortOrder = "${MediaStore.Audio.AudioColumns.DISPLAY_NAME} ASC"
 
+    fun getMusicListFlow(): Flow<List<Music>> = getCursorData()
 
-    @WorkerThread
-    fun fetchMusicList(): List<Music> {
-        return getCursorData()
-    }
-
-
-    private fun getCursorData(): MutableList<Music> {
-        val audioList = mutableListOf<Music>()
-
-        mCursor = context.contentResolver.query(
+    private fun getCursorData(): Flow<List<Music>> {
+        cursor = context.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             projection,
-            selectionClause,
+            selectionClaus,
             selectionArg,
             sortOrder
         )
 
-        mCursor?.use { cursor ->
-            val idColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns._ID)
+        cursor?.use { mCursor ->
             val displayNameColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.DISPLAY_NAME)
-            val artistColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.ARTIST)
-            val dataColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.DATA)
+                mCursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.DISPLAY_NAME)
+            val idColumn = mCursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns._ID)
+            val idAlbumColumn =
+                mCursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.ALBUM_ID)
+            val titleColumn = mCursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.TITLE)
             val durationColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.DURATION)
-            val titleColumn =
-                cursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.TITLE)
+                mCursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.DURATION)
+            val artistColumn = mCursor.getColumnIndexOrThrow(MediaStore.Audio.AudioColumns.ARTIST)
 
-            cursor.apply {
-                if (count == 0) {
-                    Log.e("Cursor", "getCursorData: Cursor is Empty")
-                } else {
-                    while (cursor.moveToNext()) {
-                        val displayName = getString(displayNameColumn)
-                        val id = getLong(idColumn)
-                        val artist = getString(artistColumn)
-                        val data = getString(dataColumn)
-                        val duration = getInt(durationColumn)
-                        //val title = getString(titleColumn)
-                        val uri = ContentUris.withAppendedId(
-                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                            id
-                        )
+            mCursor.apply {
 
-                        audioList += Music(
-                            musicId = id,
-                            albumName = data,
+                while (mCursor.moveToNext()) {
+                    val displayName = getString(displayNameColumn)
+                    val id = getLong(idColumn)
+                    val idAlbum = getLong(idAlbumColumn)
+                    val title = getString(titleColumn)
+                    val duration = getInt(durationColumn)
+                    val artistName = getString(artistColumn)
+                    val uri = ContentUris.withAppendedId(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        id
+                    )
+                    val albumArt = ContentUris.withAppendedId(
+                        MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+                        idAlbum
+                    )
+
+                    musicList.value.add(
+                        Music(
                             songName = displayName,
+                            musicId = id,
                             contentUri = uri,
+                            title = title,
+                            artistName = artistName,
                             duration = duration,
-                            artistName = artist,
+                            albumArt = albumArt
                         )
-                    }
-
+                    )
                 }
             }
-
-
         }
-
-        return audioList
+        return musicList
     }
+}
 
 //    @WorkerThread
 //    fun getAlbumArt(context: Context, uri: Uri): Bitmap?{
@@ -115,4 +108,3 @@ constructor(@ApplicationContext val context: Context) {
 //        return bitmap
 //    }
 
-}
