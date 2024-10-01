@@ -11,7 +11,7 @@ import javax.inject.Inject
 class MusicRepository @Inject constructor(
     private val musicContentResolver: MusicContentResolver,
     private val musicDao: MusicDao,
-    private val playlistDao: PlaylistDao,
+//    private val playlistDao: PlaylistDao,
 ) {
 
 

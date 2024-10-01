@@ -4,13 +4,13 @@ import android.content.ContentUris
 import android.content.Context
 import android.database.Cursor
 import android.provider.MediaStore
+import androidx.annotation.WorkerThread
 import com.rohan.classic_ai_player.data.model.Music
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 
-class ContentResolver @Inject constructor(
+class MusicContentResolver @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     private val musicList = MutableStateFlow(mutableListOf<Music>())
@@ -31,9 +31,15 @@ class ContentResolver @Inject constructor(
     private val selectionArg = arrayOf("1")
     private val sortOrder = "${MediaStore.Audio.AudioColumns.DISPLAY_NAME} ASC"
 
-    fun getMusicListFlow(): Flow<List<Music>> = getCursorData()
+    @WorkerThread
+    fun fetchMusicList(): List<Music> {
+        return getCursorData()
+    }
 
-    private fun getCursorData(): Flow<List<Music>> {
+    private fun getCursorData(): MutableList<Music> {
+
+        val musicList = mutableListOf<Music>()
+
         cursor = context.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             projection,
@@ -71,7 +77,7 @@ class ContentResolver @Inject constructor(
                         idAlbum
                     )
 
-                    musicList.value.add(
+                    musicList.add(
                         Music(
                             songName = displayName,
                             musicId = id,

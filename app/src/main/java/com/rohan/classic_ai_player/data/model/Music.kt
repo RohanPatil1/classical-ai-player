@@ -23,7 +23,8 @@ data class Music(
     val contentUri: Uri,
     val artistName: String,
     val songName: String,
-    val albumName: String,
+    val title: String,
+    val albumArt: Uri,
     val duration: Int,
     val audioStats: AudioStats? = null,
 )

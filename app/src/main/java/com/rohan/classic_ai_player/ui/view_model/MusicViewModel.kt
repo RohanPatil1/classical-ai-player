@@ -1,20 +1,37 @@
+@file:OptIn(SavedStateHandleSaveableApi::class)
+
 package com.rohan.classic_ai_player.ui.view_model
 
+import android.annotation.SuppressLint
+import android.net.Uri
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
+import androidx.lifecycle.viewmodel.compose.saveable
 import androidx.media3.exoplayer.ExoPlayer
 import com.rohan.classic_ai_player.data.model.Music
+import com.rohan.classic_ai_player.data.model.Playlist
 import com.rohan.classic_ai_player.data.repository.MusicRepository
 import com.rohan.classic_ai_player.player.service.MusicPlayerHandler
 import com.rohan.classic_ai_player.utils.DataResult
+import com.rohan.classic_ai_player.utils.MusicState
+import com.rohan.classic_ai_player.utils.PlayerUiEvents
+import com.rohan.classic_ai_player.utils.ZPlayerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.LinkedList
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.random.Random
 
 data class Pair(var current: Int, var previous: Int)
 
@@ -23,20 +40,52 @@ data class Pair(var current: Int, var previous: Int)
 class MusicViewModel @Inject constructor(
     private val exoPlayer: ExoPlayer,
     private val repository: MusicRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-
+    val musicDummy = Music(
+        musicId = 0L,
+        albumArt = Uri.EMPTY,
+        contentUri = Uri.EMPTY,
+        songName = "",
+        artistName = "",
+        duration = 0,
+        title = ""
+    )
     private val musicPlayerHandler: MusicPlayerHandler =
         MusicPlayerHandler(exoPlayer, viewModelScope)
+
+    private val _appCurrentPlayList = MutableStateFlow<List<Music>>(listOf())
+    val appCurrentPlayList = _appCurrentPlayList.asStateFlow()
+
+
+    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
+    val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
+
+    private val _progress = MutableStateFlow<Float>(0f)
+    val progress = _progress.asStateFlow()
 
     private val _uiState = MutableLiveData<UIState>()
     val uiState: LiveData<UIState> = _uiState
 
-    var allMusicList = emptyList<Music>()
-    private var isMusicListLoaded = false
-    private var isShuffleMode = false
+    var duration by savedStateHandle.saveable { mutableLongStateOf(0L) }
+    var progressString by savedStateHandle.saveable { mutableStateOf("00:00") }
 
-    private var playbackPair = Pair(0, 0)
+    private val _currSelectedMusic = MutableStateFlow<Music>(musicDummy)
+    val currSelectedMusic = _currSelectedMusic.asStateFlow()
+
+    private val _isPlaying = MutableStateFlow<Boolean>(false)
+    val isPlaying = _isPlaying.asStateFlow()
+
+    private var isMusicListLoaded = false
+
+    private val _exoPlayer = exoPlayer
+    val mExoPlayer = _exoPlayer
+
+    init {
+
+        initMusicState()
+    }
 
     fun loadMusicIfNeeded() {
         println("LOADED IF NEEDED : ${isMusicListLoaded}")
@@ -48,56 +97,187 @@ class MusicViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             when (val dataResult = repository.getAllMusic()) {
                 is DataResult.Success -> {
-                    //_allMusicList.postValue(dataResult.data)
-                    allMusicList = dataResult.data
+
+                    _appCurrentPlayList.value = dataResult.data
                     _uiState.postValue(UIState.Success(data = dataResult.data))
-                    isMusicListLoaded = allMusicList.isNotEmpty()
+                    isMusicListLoaded = _appCurrentPlayList.value.isNotEmpty()
+
+                    withContext(Dispatchers.Main) {
+                        setMediaItemList(_appCurrentPlayList.value)
+                    }
                     println("VM POSTED VALUE")
                 }
 
                 is DataResult.Error -> {
                     _uiState.postValue(dataResult.exception.message?.let { UIState.Error(it) })
                 }
+
+                else -> {}
             }
         }
     }
 
-    fun playMusic(newMusicIndex: Int) {
-        playbackPair.previous = playbackPair.current
-        playbackPair.current = newMusicIndex
 
-        musicPlayerHandler.playMusic(allMusicList[playbackPair.current])
+    fun setMediaItemList(musicList: List<Music>) {
+        musicPlayerHandler.setMusicPlaylist(musicList)
     }
 
-    fun nextMusic() {
-        val currIndex = playbackPair.current
-        val nextIndex = if (isShuffleMode) getRandomIndex(currIndex) else currIndex + 1
-        val n = allMusicList.size
-        playbackPair.previous = playbackPair.current
-        playbackPair.current = nextIndex % n
 
-        musicPlayerHandler.playMusic(allMusicList[playbackPair.current])
-    }
+    private fun initMusicState() {
+        viewModelScope.launch {
+            musicPlayerHandler.musicPlayerState.collectLatest { mediaState ->
+                when (mediaState) {
+                    MusicState.Idle -> {
+                    }
 
-    fun prevMusic() {
-        val prev = playbackPair.previous
-        playbackPair.previous = playbackPair.current
-        playbackPair.current = prev
+                    is MusicState.Buffering -> {
+                        computeProgress(mediaState.progress)
+                    }
 
-        musicPlayerHandler.playMusic(allMusicList[playbackPair.current])
-    }
+                    is MusicState.CurrentPlaying -> {
+                        _currSelectedMusic.value = appCurrentPlayList.value[mediaState.itemIndex]
+                    }
 
-    private fun getRandomIndex(currIndex: Int): Int {
-        return if (allMusicList.size > 1) {
-            var newIndex: Int
-            do {
-                newIndex = Random.nextInt(allMusicList.size)
-            } while (newIndex == currIndex)
-            newIndex
-        } else {
-            0
+                    is MusicState.InProgress -> {
+                        computeProgress(mediaState.progress)
+                    }
+
+                    is MusicState.Playing -> {
+                        _isPlaying.value = mediaState.isPlaying
+
+                    }
+
+                    is MusicState.Ready -> {
+                        duration = mediaState.duration
+                    }
+                }
+            }
         }
     }
+
+    fun onPlayerUiChanged(uiEvents: PlayerUiEvents) = viewModelScope.launch {
+        when (uiEvents) {
+            PlayerUiEvents.Backward -> musicPlayerHandler.handlePlayerState(ZPlayerState.Backward)
+            PlayerUiEvents.Forward -> musicPlayerHandler.handlePlayerState(ZPlayerState.Forward)
+            PlayerUiEvents.SeekToNext -> musicPlayerHandler.handlePlayerState(ZPlayerState.SeekToNext)
+            is PlayerUiEvents.PlayPause -> {
+                musicPlayerHandler.handlePlayerState(
+                    ZPlayerState.PlayPause
+                )
+            }
+
+            is PlayerUiEvents.SeekTo -> {
+                musicPlayerHandler.handlePlayerState(
+                    ZPlayerState.SeekTo,
+                    seekPosition = ((duration * uiEvents.position) / 100f).toLong()
+                )
+            }
+
+            is PlayerUiEvents.SelectedAudioChange -> {
+                musicPlayerHandler.handlePlayerState(
+                    ZPlayerState.SelectedMusicChange,
+                    selectedMediaIndex = uiEvents.index
+                )
+            }
+
+            is PlayerUiEvents.UpdateProgress -> {
+                musicPlayerHandler.handlePlayerState(
+                    ZPlayerState.UpdateProgress(
+                        uiEvents.newProgress
+                    )
+                )
+                _progress.value = uiEvents.newProgress
+
+            }
+        }
+    }
+
+
+    private fun computeProgress(currentProgress: Long) {
+        _progress.value =
+            if (currentProgress > 0) ((currentProgress.toFloat() / duration.toFloat()) * 100f)
+            else 0f
+        progressString = formatDuration(currentProgress)
+
+        println("PROGRESS VM: ${_progress.value}")
+        println("TOTAL DURATION VM: ${currSelectedMusic.value.duration}")
+    }
+
+    @SuppressLint("DefaultLocale")
+    fun formatDuration(duration: Long): String {
+        val minute = TimeUnit.MINUTES.convert(duration, TimeUnit.MILLISECONDS)
+        val seconds = (minute) - minute * TimeUnit.SECONDS.convert(1, TimeUnit.MINUTES)
+        return String.format("%02d:%02d", minute, seconds)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        viewModelScope.launch {
+            musicPlayerHandler.handlePlayerState(ZPlayerState.Stop)
+        }
+
+        musicPlayerHandler.release()
+    }
+
+//    fun playMusic(newMusicIndex: Int) {
+//        playbackPair.previous = playbackPair.current
+//        playbackPair.current = newMusicIndex
+//
+//        musicPlayerHandler.playMusic(allMusicList[playbackPair.current])
+//    }
+//
+//    fun nextMusic() {
+//        val currIndex = playbackPair.current
+//        val nextIndex = if (isShuffleMode) getRandomIndex(currIndex) else currIndex + 1
+//        val n = allMusicList.size
+//        playbackPair.previous = playbackPair.current
+//        playbackPair.current = nextIndex % n
+//
+//        musicPlayerHandler.playMusic(allMusicList[playbackPair.current])
+//    }
+//
+//    fun prevMusic() {
+//        val prev = playbackPair.previous
+//        playbackPair.previous = playbackPair.current
+//        playbackPair.current = prev
+//
+//        musicPlayerHandler.playMusic(allMusicList[playbackPair.current])
+//    }
+//
+//    private fun getRandomIndex(currIndex: Int): Int {
+//        return if (allMusicList.size > 1) {
+//            var newIndex: Int
+//            do {
+//                newIndex = Random.nextInt(allMusicList.size)
+//            } while (newIndex == currIndex)
+//            newIndex
+//        } else {
+//            0
+//        }
+//    }
+//
+//
+//    private fun computeProgress(currentProgress: Long) {
+//        progress =
+//            if (currentProgress > 0) ((currentProgress.toFloat() / duration.toFloat()) * 100f)
+//            else 0f
+//        progressString = formatDuration(currentProgress)
+//    }
+//
+//    @SuppressLint("DefaultLocale")
+//    fun formatDuration(duration: Long): String {
+//        val minute = TimeUnit.MINUTES.convert(duration, TimeUnit.MILLISECONDS)
+//        val seconds = (minute) - minute * TimeUnit.SECONDS.convert(1, TimeUnit.MINUTES)
+//        return String.format("%02d:%02d", minute, seconds)
+//    }
+//
+//    override fun onCleared() {
+//        viewModelScope.launch {
+//            musicPlayerHandler.handlePlayerState(PlayerState.Stop)
+//        }
+//
+//        super.onCleared()
+//    }
 
     // State for all music
 //     val allMusicList = repository.getAllMusic()
@@ -243,9 +423,18 @@ class MusicViewModel @Inject constructor(
 //        musicPlayerHandler.release()
 //    }
 //
+
+
 sealed class UIState {
     object Loading : UIState()
-    data class Success<out T>(val data: T) : UIState()
+    data class Success(val data: List<Music>) : UIState()
     data class Error(val message: String) : UIState()
 }
+
+//
+//sealed class UIState {
+//    object Loading : UIState()
+//    data class Success<out T>(val data: T) : UIState()
+//    data class Error(val message: String) : UIState()
+//}
 
