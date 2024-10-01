@@ -39,7 +39,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -47,8 +49,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
+import coil.compose.AsyncImage
 import com.rohan.classic_ai_player.R
 import com.rohan.classic_ai_player.data.model.Music
+import com.rohan.classic_ai_player.ui.compose_widgets.ClassicAppBar
 import com.rohan.classic_ai_player.ui.view_model.MusicViewModel
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -130,40 +134,40 @@ fun PlayerTopContent(
     val mAudio = remember(audio) { mutableStateOf(audio) }
     val painterState = remember(audio) { mutableStateOf(PainterState.LOADING) }
 
-//    Box(
-//        modifier = Modifier.fillMaxWidth(),
-//        contentAlignment = Alignment.TopCenter
-//    ) {
-//        ClassicAppBar(
-//            modifier = Modifier.padding(top = 20.dp),
-//            sheetState = sheetScaffoldState
-//        )
-//        when (painterState.value) {
-//            PainterState.LOADING, PainterState.SUCCESS -> {
-//                AsyncImage(
-//                    model = mAudio.value.albumArt,
-//                    contentDescription = "Album Art",
-//                    modifier = Modifier
-//                        .clip(RoundedCornerShape(8.dp))
-//                        .fillMaxWidth()
-//                        .fillMaxHeight(0.5f),
-//                    contentScale = ContentScale.FillBounds,
-//                    onError = { painterState.value = PainterState.ERROR },
-//                    onLoading = { painterState.value = PainterState.LOADING }
-//                )
-//            }
-//
-//            PainterState.ERROR -> {
-//                Icon(
-//                    painter = painterResource(id = R.drawable.music),
-//                    contentDescription = "Music",
-//                    modifier = Modifier
-//                        .scale(0.50f)
-//                        .padding(top = 22.dp, bottom = 22.dp)
-//                )
-//            }
-//        }
-//    }
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        ClassicAppBar(
+            modifier = Modifier.padding(top = 20.dp),
+            sheetState = sheetScaffoldState
+        )
+        when (painterState.value) {
+            PainterState.LOADING, PainterState.SUCCESS -> {
+                AsyncImage(
+                    model = mAudio.value.albumArt,
+                    contentDescription = "Album Art",
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .fillMaxWidth()
+                        .fillMaxHeight(0.5f),
+                    contentScale = ContentScale.FillBounds,
+                    onError = { painterState.value = PainterState.ERROR },
+                    onLoading = { painterState.value = PainterState.LOADING }
+                )
+            }
+
+            PainterState.ERROR -> {
+                Icon(
+                    painter = painterResource(id = R.drawable.music),
+                    contentDescription = "Music",
+                    modifier = Modifier
+                        .scale(0.50f)
+                        .padding(top = 22.dp, bottom = 22.dp)
+                )
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
