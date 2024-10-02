@@ -4,6 +4,7 @@ import android.util.Log
 import com.rohan.classic_ai_player.data.db.MusicDao
 import com.rohan.classic_ai_player.data.db.PlaylistDao
 import com.rohan.classic_ai_player.data.model.Music
+import com.rohan.classic_ai_player.data.model.Playlist
 import com.rohan.classic_ai_player.data.source.MusicContentResolver
 import com.rohan.classic_ai_player.utils.DataResult
 import javax.inject.Inject
@@ -11,9 +12,8 @@ import javax.inject.Inject
 class MusicRepository @Inject constructor(
     private val musicContentResolver: MusicContentResolver,
     private val musicDao: MusicDao,
-//    private val playlistDao: PlaylistDao,
+    private val playlistDao: PlaylistDao,
 ) {
-
 
     suspend fun getAllMusic(): DataResult<List<Music>> {
         return try {
@@ -38,6 +38,42 @@ class MusicRepository @Inject constructor(
         }
     }
 
+    fun getAllPlaylist(): DataResult<List<Playlist>> {
+        return try {
+            val dataList = playlistDao.getAllPlaylists()
+            DataResult.Success(dataList)
+        } catch (e: Exception) {
+            Log.d(TAG, e.message.toString())
+            DataResult.Error(e)
+        }
+    }
+
+    suspend fun createPlaylist(playlistName: String, musicIds: List<Long> = emptyList()) {
+        playlistDao.createPlaylist(Playlist(musicIds = musicIds, playlistName = playlistName))
+    }
+
+
+    suspend fun addMusicToPlaylist(playlist: Playlist, music: Music) {
+        playlistDao.addMusicToPlaylist(playlist.playlistId, music.musicId)
+    }
+
+    suspend fun addMusicListToPlaylist(playlistId: Int, musicIds: List<Long>) {
+
+        val musicIdsString = toStringForUpdate(musicIds)
+        playlistDao.addMultipleMusicToPlaylist(playlistId, musicIdsString)
+    }
+
+    suspend fun removeMusicFromPlaylist(playlist: Playlist, music: Music) {
+        playlistDao.removeMusicFromPlaylist(playlist.playlistId, music.musicId)
+    }
+
+    suspend fun getPlaylistById(playlistId: Int): Playlist? {
+        return playlistDao.getPlaylistById(playlistId)
+    }
+
+    private fun toStringForUpdate(musicIds: List<Long>): String {
+        return musicIds.distinct().joinToString(",")
+    }
 //    fun getAllMusic(): Flow<List<Music>> = flow {
 //        // Get the initial list of music from the Room database
 //        val initialList = musicDao.getAllMusic().firstOrNull() ?: emptyList()

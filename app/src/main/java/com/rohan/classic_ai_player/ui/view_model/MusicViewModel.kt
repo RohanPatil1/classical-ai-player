@@ -25,15 +25,12 @@ import com.rohan.classic_ai_player.utils.ZPlayerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-
-data class Pair(var current: Int, var previous: Int)
 
 
 @HiltViewModel
@@ -60,7 +57,7 @@ class MusicViewModel @Inject constructor(
 
 
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
-    val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
+    val playlists = _playlists.asStateFlow()
 
     private val _progress = MutableStateFlow<Float>(0f)
     val progress = _progress.asStateFlow()
@@ -77,6 +74,10 @@ class MusicViewModel @Inject constructor(
     private val _isPlaying = MutableStateFlow<Boolean>(false)
     val isPlaying = _isPlaying.asStateFlow()
 
+    private val _selectedMusicIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedMusicIds = _selectedMusicIds.asStateFlow()
+
+
     private var isMusicListLoaded = false
 
     private val _exoPlayer = exoPlayer
@@ -89,7 +90,10 @@ class MusicViewModel @Inject constructor(
 
     fun loadMusicIfNeeded() {
         println("LOADED IF NEEDED : ${isMusicListLoaded}")
-        if (!isMusicListLoaded) fetchMusicList()
+        if (!isMusicListLoaded) {
+            fetchMusicList()
+            fetchAllPlaylists()
+        }
     }
 
     private fun fetchMusicList() {
@@ -118,7 +122,7 @@ class MusicViewModel @Inject constructor(
     }
 
 
-    fun setMediaItemList(musicList: List<Music>) {
+    private fun setMediaItemList(musicList: List<Music>) {
         musicPlayerHandler.setMusicPlaylist(musicList)
     }
 
@@ -208,6 +212,68 @@ class MusicViewModel @Inject constructor(
         val minute = TimeUnit.MINUTES.convert(duration, TimeUnit.MILLISECONDS)
         val seconds = (minute) - minute * TimeUnit.SECONDS.convert(1, TimeUnit.MINUTES)
         return String.format("%02d:%02d", minute, seconds)
+    }
+
+
+    fun createNewPlaylist(name: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val musicIdList = _selectedMusicIds.value.toList()
+            repository.createPlaylist(playlistName = name, musicIds = musicIdList)
+            fetchAllPlaylists()
+            clearSelection()
+        }
+    }
+
+    fun addMusicToPlaylist(playlist: Playlist, music: Music) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addMusicToPlaylist(playlist, music)
+        }
+    }
+
+
+    fun addMusicListToPlaylist(playlistId: Int, musicIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.addMusicListToPlaylist(playlistId, musicIds)
+        }
+    }
+
+    private fun fetchAllPlaylists() {
+        viewModelScope.launch(Dispatchers.IO) {
+            when (val dataResult = repository.getAllPlaylist()) {
+                is DataResult.Success -> {
+                    _playlists.value = dataResult.data
+                    println("VM PLAYLIST POSTED VALUE")
+                }
+
+                is DataResult.Error -> {
+                    // _uiState.postValue(dataResult.exception.message?.let { UIState.Error(it) })
+                }
+
+                else -> {}
+            }
+        }
+    }
+
+
+    fun removeMusicFromPlaylist(playlist: Playlist, music: Music) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.removeMusicFromPlaylist(playlist, music)
+        }
+    }
+
+    fun toggleMusicSelection(musicId: Long) {
+        _selectedMusicIds.value = _selectedMusicIds.value.toMutableSet().apply {
+            if (contains(musicId)) remove(musicId) else add(musicId)
+        }
+    }
+
+    fun clearSelection() {
+        _selectedMusicIds.value = emptySet()
+    }
+
+    fun addSelectedMusicToPlaylist(playlistId: Int) {
+        addMusicListToPlaylist(playlistId, _selectedMusicIds.value.toList())
+        clearSelection()
     }
 
     override fun onCleared() {
