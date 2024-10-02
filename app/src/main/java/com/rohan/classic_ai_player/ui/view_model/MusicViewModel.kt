@@ -49,6 +49,8 @@ class MusicViewModel @Inject constructor(
         duration = 0,
         title = ""
     )
+
+    val playlistDummy = Playlist(playlistName = "", musicIds = emptyList())
     private val musicPlayerHandler: MusicPlayerHandler =
         MusicPlayerHandler(exoPlayer, viewModelScope)
 
@@ -70,6 +72,9 @@ class MusicViewModel @Inject constructor(
 
     private val _currSelectedMusic = MutableStateFlow<Music>(musicDummy)
     val currSelectedMusic = _currSelectedMusic.asStateFlow()
+
+    private val _currSelectedPlaylistMusic = MutableStateFlow<List<Music>>(emptyList())
+    val currSelectedPlaylistMusic = _currSelectedPlaylistMusic.asStateFlow()
 
     private val _isPlaying = MutableStateFlow<Boolean>(false)
     val isPlaying = _isPlaying.asStateFlow()
@@ -108,6 +113,8 @@ class MusicViewModel @Inject constructor(
 
                     withContext(Dispatchers.Main) {
                         setMediaItemList(_appCurrentPlayList.value)
+
+                        if (isMusicListLoaded) _currSelectedMusic.value = dataResult.data[0]
                     }
                     println("VM POSTED VALUE")
                 }
@@ -276,6 +283,28 @@ class MusicViewModel @Inject constructor(
         clearSelection()
     }
 
+
+    fun playPlaylist(playlist: Playlist) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val musicList = repository.getMusicListFromIds(playlist.musicIds)
+            _currSelectedPlaylistMusic.value = musicList
+            if (musicList.isNotEmpty()) _currSelectedMusic.value = musicList[0]
+
+            // set music list to exoplayer
+            withContext(Dispatchers.Main) {
+                exoPlayer.clearMediaItems()
+                musicPlayerHandler.setMusicPlaylist(musicList)
+
+            }
+        }
+    }
+
+    fun resetPlaylistSelection() {
+        _currSelectedPlaylistMusic.value = emptyList()
+        mExoPlayer.clearMediaItems()
+        musicPlayerHandler.setMusicPlaylist(appCurrentPlayList.value)
+    }
+
     override fun onCleared() {
         super.onCleared()
         viewModelScope.launch {
@@ -284,6 +313,7 @@ class MusicViewModel @Inject constructor(
 
         musicPlayerHandler.release()
     }
+
 
 //    fun playMusic(newMusicIndex: Int) {
 //        playbackPair.previous = playbackPair.current

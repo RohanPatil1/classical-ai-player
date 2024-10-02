@@ -3,6 +3,7 @@ package com.rohan.classic_ai_player.ui.screens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -59,17 +61,10 @@ fun HomeScreen(
 ) {
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-
     val tabs = listOf("Songs", "Playlists")
     val appCurrentPlayList by viewModel.appCurrentPlayList.collectAsState()
-
     val uiState by viewModel.uiState.observeAsState(UIState.Loading)
-
     val sheetState = rememberBottomSheetScaffoldState()
-
-
-    val currentMediaItemIndex = viewModel.mExoPlayer.currentMediaItemIndex
-    val exoPlayer = viewModel.mExoPlayer
     val selectedIndex = remember(viewModel.mExoPlayer) { mutableIntStateOf(0) }
 
     when (uiState) {
@@ -84,8 +79,12 @@ fun HomeScreen(
                 println("LAUNCHED EFFECT: List<Music> to List<MediaItem>")
             }
 
-
             BottomSheetScaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Classic App bar") }
+                    )
+                },
                 modifier = Modifier.fillMaxSize(),
                 containerColor = MaterialTheme.colorScheme.background,
                 sheetContent = {
@@ -136,7 +135,10 @@ fun HomeScreen(
                             viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
                         }
 
-                        1 -> PlaylistScreen(viewModel)
+                        1 -> PlaylistScreen(viewModel) {
+                            selectedIndex.intValue = it
+                            viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
+                        }
                     }
                 }
             }
@@ -223,46 +225,47 @@ fun MusicListScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
     val selectedMusicIds by viewModel.selectedMusicIds.collectAsState()
     var showPlaylistDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Music List") },
-                actions = {
-                    if (selectedMusicIds.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.clearSelection() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear selection")
-                        }
-                        IconButton(onClick = { showPlaylistDialog = true }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.PlaylistAdd,
-                                contentDescription = "Add to playlist"
-                            )
-                        }
+    Scaffold { paddingValues ->
+        Column {
+            if (selectedMusicIds.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { viewModel.clearSelection() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear selection")
+                    }
+                    IconButton(onClick = { showPlaylistDialog = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.PlaylistAdd,
+                            contentDescription = "Add to playlist"
+                        )
                     }
                 }
-            )
-        }
-    ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            itemsIndexed(musicList) { index, music ->
-                val isSelected = selectedMusicIds.contains(music.musicId)
-                ListItem(
-                    headlineContent = { Text(music.songName) },
-                    supportingContent = { Text(music.artistName) },
-                    modifier = Modifier
-                        .combinedClickable(
-                            onClick = {
-                                selectedIndex(index)
-                            },
-                            onLongClick = { viewModel.toggleMusicSelection(music.musicId) }
-                        )
-                        .padding(16.dp),
-                    leadingContent = {
-                        if (isSelected) {
-                            Icon(Icons.Default.Check, contentDescription = "Selected")
+
+            }
+            LazyColumn(modifier = Modifier.padding(paddingValues)) {
+                itemsIndexed(musicList) { index, music ->
+                    val isSelected = selectedMusicIds.contains(music.musicId)
+                    ListItem(
+                        headlineContent = { Text(music.songName) },
+                        supportingContent = { Text(music.artistName) },
+                        modifier = Modifier
+                            .combinedClickable(
+                                onClick = {
+                                    selectedIndex(index)
+                                },
+                                onLongClick = { viewModel.toggleMusicSelection(music.musicId) }
+                            )
+                            .padding(16.dp),
+                        leadingContent = {
+                            if (isSelected) {
+                                Icon(Icons.Default.Check, contentDescription = "Selected")
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -294,20 +297,61 @@ fun MusicListScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
 
 
 @Composable
-fun PlaylistScreen(viewModel: MusicViewModel) {
+fun PlaylistScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
     val playlists by viewModel.playlists.collectAsState()
+    val currSelectedPlaylistMusic by viewModel.currSelectedPlaylistMusic.collectAsState()
+    var playlistName by remember { mutableStateOf("") }
+    Column {
 
-    LazyColumn {
-        items(playlists) { playlist ->
-            PlaylistTile(
-                playlist = playlist,
-                onClick = {
-                    // on playlist play
+        if (currSelectedPlaylistMusic.isNotEmpty()) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = {
+                    viewModel.resetPlaylistSelection()
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
-            )
+                Text(playlistName)
+            }
+
+            // show song list for the current selected playlist
+            LazyColumn {
+                itemsIndexed(currSelectedPlaylistMusic) { index, music ->
+                    ListItem(
+                        headlineContent = { Text(music.songName) },
+                        supportingContent = { Text(music.artistName) },
+                        modifier = Modifier
+                            .clickable {
+                                selectedIndex(index)
+                            }
+                            .padding(16.dp),
+
+                        )
+                }
+            }
+        } else {
+            // show list of playlists
+            LazyColumn {
+                items(playlists) { playlist ->
+                    PlaylistTile(
+                        playlist = playlist,
+                        onClick = {
+                            // on playlist play
+                            playlistName = playlist.playlistName
+                            viewModel.playPlaylist(playlist)
+                        }
+                    )
+                }
+            }
         }
+
+
     }
+
+
 }
+
 
 @Composable
 fun PlaylistTile(playlist: Playlist, onClick: () -> Unit) {
@@ -324,6 +368,4 @@ fun PlaylistTile(playlist: Playlist, onClick: () -> Unit) {
             contentDescription = null
         )
     }
-
-
 }

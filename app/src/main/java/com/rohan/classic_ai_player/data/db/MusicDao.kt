@@ -21,4 +21,7 @@ interface MusicDao {
 
     @Query("UPDATE music_table SET audioStats = :audioStats WHERE musicId = :id")
     suspend fun updateAudioStats(id: Long, audioStats: AudioStats)
+
+    @Query("SELECT * FROM music_table WHERE musicId IN (:musicIds)")
+    suspend fun getMusicListFromIds(musicIds: List<Long>): List<Music>
 }

@@ -38,6 +38,10 @@ class MusicRepository @Inject constructor(
         }
     }
 
+    suspend fun getMusicListFromIds(musicIds: List<Long>): List<Music> {
+        return musicDao.getMusicListFromIds(musicIds)
+    }
+
     fun getAllPlaylist(): DataResult<List<Playlist>> {
         return try {
             val dataList = playlistDao.getAllPlaylists()
