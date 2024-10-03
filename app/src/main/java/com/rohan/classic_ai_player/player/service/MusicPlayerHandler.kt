@@ -1,10 +1,13 @@
 package com.rohan.classic_ai_player.player.service
 
+import android.media.audiofx.LoudnessEnhancer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.rohan.classic_ai_player.data.model.Music
+import com.rohan.classic_ai_player.player.normalizer.MusicNormalizer
 import com.rohan.classic_ai_player.utils.MusicState
 import com.rohan.classic_ai_player.utils.ZPlayerState
 import kotlinx.coroutines.CoroutineScope
@@ -16,19 +19,37 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 
+@UnstableApi
 class MusicPlayerHandler(
     private val exoPlayer: ExoPlayer,
     private val coroutineScope: CoroutineScope,
+    private val musicNormalizer: MusicNormalizer,
 ) : Player.Listener {
 
-    init {
-        exoPlayer.addListener(this)
-    }
+
 
     private val _musicPlayerState = MutableStateFlow<MusicState>(MusicState.Idle)
     val musicPlayerState = _musicPlayerState.asStateFlow()
+    private val loudnessEnhancer = LoudnessEnhancer(exoPlayer.audioSessionId)
 
     private val job: Job? = null
+
+    init {
+        exoPlayer.addListener(this)
+        loudnessEnhancer.enabled = true
+    }
+
+    fun applyNormalization(music: Music) {
+        val gain = music.audioStats?.let { musicNormalizer.calculateDynamicGain(it) } ?: 0f
+        loudnessEnhancer.setTargetGain(gain.toInt())
+    }
+//    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+//        mediaItem?.let {
+//            val currentMusic = playlist[player.currentMediaItemIndex]
+//            applyNormalization(currentMusic)
+//        }
+//        super.onMediaItemTransition(mediaItem, reason)
+//    }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
 
@@ -193,6 +214,7 @@ class MusicPlayerHandler(
 
     fun release() {
         exoPlayer.release()
+        loudnessEnhancer.release()
         exoPlayer.removeListener(this)
     }
 //    private var progressUpdateJob: Job? = null

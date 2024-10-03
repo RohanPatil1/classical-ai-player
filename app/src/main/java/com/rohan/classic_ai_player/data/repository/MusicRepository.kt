@@ -6,6 +6,7 @@ import com.rohan.classic_ai_player.data.db.PlaylistDao
 import com.rohan.classic_ai_player.data.model.Music
 import com.rohan.classic_ai_player.data.model.Playlist
 import com.rohan.classic_ai_player.data.source.MusicContentResolver
+import com.rohan.classic_ai_player.player.normalizer.MusicNormalizer
 import com.rohan.classic_ai_player.utils.DataResult
 import javax.inject.Inject
 
@@ -13,6 +14,7 @@ class MusicRepository @Inject constructor(
     private val musicContentResolver: MusicContentResolver,
     private val musicDao: MusicDao,
     private val playlistDao: PlaylistDao,
+    private val musicNormalizer: MusicNormalizer,
 ) {
 
     suspend fun getAllMusic(): DataResult<List<Music>> {
@@ -53,16 +55,23 @@ class MusicRepository @Inject constructor(
     }
 
     suspend fun createPlaylist(playlistName: String, musicIds: List<Long> = emptyList()) {
+        normalizeMusicList(musicIds)
         playlistDao.createPlaylist(Playlist(musicIds = musicIds, playlistName = playlistName))
     }
 
-
-    suspend fun addMusicToPlaylist(playlist: Playlist, music: Music) {
-        playlistDao.addMusicToPlaylist(playlist.playlistId, music.musicId)
+    private suspend fun normalizeMusicList(musicIds: List<Long>) {
+        musicIds.forEach { id ->
+            val currMusic = musicDao.getMusicById(id)
+            currMusic?.contentUri?.path?.let {
+                val audioStat = musicNormalizer.analyzeAudio(it)
+                musicDao.updateAudioStats(currMusic.musicId, audioStat)
+            }
+        }
     }
 
-    suspend fun addMusicListToPlaylist(playlistId: Int, musicIds: List<Long>) {
 
+    suspend fun addMusicListToPlaylist(playlistId: Int, musicIds: List<Long>) {
+        normalizeMusicList(musicIds)
         val musicIdsString = toStringForUpdate(musicIds)
         playlistDao.addMultipleMusicToPlaylist(playlistId, musicIdsString)
     }

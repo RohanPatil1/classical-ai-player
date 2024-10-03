@@ -13,10 +13,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.SavedStateHandleSaveableApi
 import androidx.lifecycle.viewmodel.compose.saveable
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.rohan.classic_ai_player.data.model.Music
 import com.rohan.classic_ai_player.data.model.Playlist
 import com.rohan.classic_ai_player.data.repository.MusicRepository
+import com.rohan.classic_ai_player.player.normalizer.MusicNormalizer
 import com.rohan.classic_ai_player.player.service.MusicPlayerHandler
 import com.rohan.classic_ai_player.utils.DataResult
 import com.rohan.classic_ai_player.utils.MusicState
@@ -33,10 +35,12 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 
+@UnstableApi
 @HiltViewModel
 class MusicViewModel @Inject constructor(
     private val exoPlayer: ExoPlayer,
     private val repository: MusicRepository,
+    private val musicNormalizer: MusicNormalizer,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -52,7 +56,7 @@ class MusicViewModel @Inject constructor(
 
     val playlistDummy = Playlist(playlistName = "", musicIds = emptyList())
     private val musicPlayerHandler: MusicPlayerHandler =
-        MusicPlayerHandler(exoPlayer, viewModelScope)
+        MusicPlayerHandler(exoPlayer, viewModelScope, musicNormalizer)
 
     private val _appCurrentPlayList = MutableStateFlow<List<Music>>(listOf())
     val appCurrentPlayList = _appCurrentPlayList.asStateFlow()
@@ -198,6 +202,7 @@ class MusicViewModel @Inject constructor(
                     n = appCurrentPlayList.value.size
                     _currSelectedMusic.value = appCurrentPlayList.value[uiEvents.index % n]
                 }
+                musicPlayerHandler.applyNormalization(_currSelectedMusic.value)
                 musicPlayerHandler.handlePlayerState(
                     ZPlayerState.SelectedMusicChange,
                     selectedMediaIndex = uiEvents.index % n
@@ -244,11 +249,11 @@ class MusicViewModel @Inject constructor(
         }
     }
 
-    fun addMusicToPlaylist(playlist: Playlist, music: Music) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.addMusicToPlaylist(playlist, music)
-        }
-    }
+//    fun addMusicToPlaylist(playlist: Playlist, music: Music) {
+//        viewModelScope.launch(Dispatchers.IO) {
+//            repository.addMusicToPlaylist(playlist, music)
+//        }
+//    }
 
 
     fun addMusicListToPlaylist(playlistId: Int, musicIds: List<Long>) {
