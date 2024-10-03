@@ -146,7 +146,7 @@ class MusicViewModel @Inject constructor(
                     }
 
                     is MusicState.CurrentPlaying -> {
-                        _currSelectedMusic.value = appCurrentPlayList.value[mediaState.itemIndex]
+                        //_currSelectedMusic.value = appCurrentPlayList.value[mediaState.itemIndex]
                     }
 
                     is MusicState.InProgress -> {
@@ -168,9 +168,13 @@ class MusicViewModel @Inject constructor(
 
     fun onPlayerUiChanged(uiEvents: PlayerUiEvents) = viewModelScope.launch {
         when (uiEvents) {
-            PlayerUiEvents.Backward -> musicPlayerHandler.handlePlayerState(ZPlayerState.Backward)
+            PlayerUiEvents.Backward -> {
+//                musicPlayerHandler.handlePlayerState(ZPlayerState.Backward)
+            }
             PlayerUiEvents.Forward -> musicPlayerHandler.handlePlayerState(ZPlayerState.Forward)
-            PlayerUiEvents.SeekToNext -> musicPlayerHandler.handlePlayerState(ZPlayerState.SeekToNext)
+            PlayerUiEvents.SeekToNext -> {
+                //musicPlayerHandler.handlePlayerState(ZPlayerState.SeekToNext, )
+            }
             is PlayerUiEvents.PlayPause -> {
                 musicPlayerHandler.handlePlayerState(
                     ZPlayerState.PlayPause
@@ -185,9 +189,18 @@ class MusicViewModel @Inject constructor(
             }
 
             is PlayerUiEvents.SelectedAudioChange -> {
+                var n = 1
+                if (currSelectedPlaylistMusic.value.isNotEmpty()) {
+                    // current item from playlist
+                    n = currSelectedPlaylistMusic.value.size
+                    _currSelectedMusic.value = currSelectedPlaylistMusic.value[uiEvents.index % n]
+                } else {
+                    n = appCurrentPlayList.value.size
+                    _currSelectedMusic.value = appCurrentPlayList.value[uiEvents.index % n]
+                }
                 musicPlayerHandler.handlePlayerState(
                     ZPlayerState.SelectedMusicChange,
-                    selectedMediaIndex = uiEvents.index
+                    selectedMediaIndex = uiEvents.index % n
                 )
             }
 
@@ -302,6 +315,8 @@ class MusicViewModel @Inject constructor(
     fun resetPlaylistSelection() {
         _currSelectedPlaylistMusic.value = emptyList()
         mExoPlayer.clearMediaItems()
+
+        _currSelectedMusic.value = appCurrentPlayList.value.first()
         musicPlayerHandler.setMusicPlaylist(appCurrentPlayList.value)
     }
 

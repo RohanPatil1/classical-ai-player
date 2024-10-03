@@ -80,6 +80,7 @@ class MusicPlayerHandler(
             music.toMediaItem()
         }
         exoPlayer.setMediaItems(mediaItemList)
+        exoPlayer.seekTo(0, 0L)
         exoPlayer.prepare()
     }
 

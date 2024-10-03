@@ -32,10 +32,14 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,17 +66,19 @@ import java.util.concurrent.TimeUnit
 @UnstableApi
 @Composable
 fun PlayerBottomSheet(
-    audio: Music,
     previous: () -> Unit,
     next: () -> Unit,
     playPause: () -> Unit,
     onSeekChange: (Float) -> Unit,
-    onIndexChange: (Int) -> Unit,
-    totalDuration: Long,
-    isPlaying: Boolean,
     sheetScaffoldState: BottomSheetScaffoldState,
     viewModel: MusicViewModel,
 ) {
+    val audio by viewModel.currSelectedMusic.collectAsState()
+    var totalDuration by remember { mutableIntStateOf(0) }
+    LaunchedEffect(audio) {
+        totalDuration = audio.duration
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopCenter
@@ -88,21 +94,21 @@ fun PlayerBottomSheet(
             )
 
             PlayerCenterControls(
-                totalDuration = totalDuration,
+                totalDuration = totalDuration.toLong(),
                 onChange = onSeekChange,
                 viewModel = viewModel,
             )
             PlayerBottomControls(
                 previous = {
                     previous()
-                    onIndexChange(viewModel.mExoPlayer.currentMediaItemIndex)
+                    //onIndexChange(viewModel.mExoPlayer.currentMediaItemIndex)
                 },
                 next = {
                     next()
-                    onIndexChange(viewModel.mExoPlayer.currentMediaItemIndex)
+                    //onIndexChange(viewModel.mExoPlayer.currentMediaItemIndex)
                 },
                 playPause = playPause,
-                totalDuration = totalDuration,
+                totalDuration = totalDuration.toLong(),
                 viewModel = viewModel
             )
         }
@@ -117,7 +123,7 @@ fun PlayerBottomSheet(
                 next = next,
                 sheetScaffoldState = sheetScaffoldState,
                 viewModel = viewModel,
-                totalDuration = totalDuration
+                totalDuration = totalDuration.toLong()
             )
         }
     }
@@ -131,7 +137,6 @@ fun PlayerTopContent(
     sheetScaffoldState: BottomSheetScaffoldState,
 ) {
 
-    val mAudio = remember(audio) { mutableStateOf(audio) }
     val painterState = remember(audio) { mutableStateOf(PainterState.LOADING) }
 
     Box(
@@ -145,7 +150,7 @@ fun PlayerTopContent(
         when (painterState.value) {
             PainterState.LOADING, PainterState.SUCCESS -> {
                 AsyncImage(
-                    model = mAudio.value.albumArt,
+                    model = audio.albumArt,
                     contentDescription = "Album Art",
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
@@ -179,7 +184,7 @@ fun PlayerTopContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = mAudio.value.songName,
+                text = audio.songName,
                 style = TextStyle(
                     fontSize = 25.sp,
                     fontWeight = FontWeight.Bold
@@ -188,7 +193,7 @@ fun PlayerTopContent(
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = mAudio.value.artistName,
+                text = audio.artistName,
                 style = TextStyle(
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Normal
@@ -349,7 +354,6 @@ fun PlayerBottomBar(
     totalDuration: Long,
 ) {
     val scope = rememberCoroutineScope()
-    val mAudio = remember(audio) { mutableStateOf(audio) }
     val painterState = remember(audio) { mutableStateOf(PainterState.LOADING) }
     val isPlaying = viewModel.isPlaying.collectAsState()
     Surface(

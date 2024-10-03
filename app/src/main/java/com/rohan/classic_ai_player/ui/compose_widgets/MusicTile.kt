@@ -31,7 +31,6 @@ import androidx.media3.common.util.UnstableApi
 import com.rohan.classic_ai_player.data.model.Music
 import com.rohan.classic_ai_player.ui.screens.formatMinSec
 import com.rohan.classic_ai_player.ui.view_model.MusicViewModel
-import com.rohan.classic_ai_player.utils.PlayerUiEvents
 
 
 enum class PainterState {
@@ -157,7 +156,6 @@ fun AudioCardItem(
             .height(80.dp)
             .padding(horizontal = 20.dp, vertical = 5.dp)
             .clickable {
-                viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(selectedIndex))
                 selectedTrack(music)
             },
         shape = RoundedCornerShape(10.dp),

@@ -32,7 +32,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
@@ -62,22 +61,12 @@ fun HomeScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     val tabs = listOf("Songs", "Playlists")
-    val appCurrentPlayList by viewModel.appCurrentPlayList.collectAsState()
     val uiState by viewModel.uiState.observeAsState(UIState.Loading)
     val sheetState = rememberBottomSheetScaffoldState()
-    val selectedIndex = remember(viewModel.mExoPlayer) { mutableIntStateOf(0) }
-
+    var currMusicIndex by remember { mutableIntStateOf(0) }
     when (uiState) {
         is UIState.Success -> {
-            val selectedTrack = viewModel.currSelectedMusic.collectAsState()
 
-            val mediaItemList = remember(true) { mutableListOf<MediaItem>() }
-            LaunchedEffect(key1 = appCurrentPlayList.size) {
-                appCurrentPlayList.forEach { music ->
-                    mediaItemList.add(MediaItem.fromUri(music.contentUri))
-                }
-                println("LAUNCHED EFFECT: List<Music> to List<MediaItem>")
-            }
 
             BottomSheetScaffold(
                 topBar = {
@@ -89,9 +78,22 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.background,
                 sheetContent = {
                     PlayerBottomSheet(
-                        audio = selectedTrack.value,
-                        previous = { viewModel.onPlayerUiChanged(PlayerUiEvents.Backward) },
-                        next = { viewModel.onPlayerUiChanged(PlayerUiEvents.SeekToNext) },
+                        previous = {
+                            currMusicIndex -= 1
+                            viewModel.onPlayerUiChanged(
+                                PlayerUiEvents.SelectedAudioChange(
+                                    currMusicIndex
+                                )
+                            )
+                        },
+                        next = {
+                            currMusicIndex += 1
+                            viewModel.onPlayerUiChanged(
+                                PlayerUiEvents.SelectedAudioChange(
+                                    currMusicIndex
+                                )
+                            )
+                        },
                         playPause = { viewModel.onPlayerUiChanged(PlayerUiEvents.PlayPause) },
                         onSeekChange = {
                             viewModel.onPlayerUiChanged(
@@ -100,12 +102,6 @@ fun HomeScreen(
                                 )
                             )
                         },
-                        onIndexChange = {
-                            selectedIndex.intValue = it
-                            viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
-                        },
-                        totalDuration = selectedTrack.value.duration.toLong(),
-                        isPlaying = viewModel.mExoPlayer.isPlaying,
                         sheetScaffoldState = sheetState,
                         viewModel = viewModel
                     )
@@ -124,19 +120,25 @@ fun HomeScreen(
                             Tab(
                                 text = { Text(title) },
                                 selected = selectedTabIndex == index,
-                                onClick = { selectedTabIndex = index }
+                                onClick = {
+                                    selectedTabIndex = index
+                                    if (index == 0) {
+                                        // Go to Songs Screen
+                                        viewModel.resetPlaylistSelection()
+                                    }
+                                }
                             )
                         }
                     }
 
                     when (selectedTabIndex) {
                         0 -> MusicListScreen(viewModel) {
-                            selectedIndex.intValue = it
+                            currMusicIndex = it
                             viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
                         }
 
                         1 -> PlaylistScreen(viewModel) {
-                            selectedIndex.intValue = it
+                            currMusicIndex = it
                             viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
                         }
                     }
