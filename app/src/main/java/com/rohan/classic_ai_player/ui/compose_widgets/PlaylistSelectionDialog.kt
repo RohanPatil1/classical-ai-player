@@ -1,5 +1,6 @@
 package com.rohan.classic_ai_player.ui.compose_widgets
 
+import androidx.annotation.OptIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,9 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.util.UnstableApi
 import com.rohan.classic_ai_player.ui.view_model.MusicViewModel
 
 
+@OptIn(UnstableApi::class)
 @Composable
 fun PlaylistSelectionDialog(viewModel: MusicViewModel, onDismiss: () -> Unit) {
     var newPlaylistName by remember { mutableStateOf("") }

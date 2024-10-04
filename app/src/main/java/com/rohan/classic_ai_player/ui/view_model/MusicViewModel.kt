@@ -213,9 +213,9 @@ class MusicViewModel @Inject constructor(
     fun createNewPlaylist(name: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val musicIdList = _selectedMusicIds.value.toList()
+            clearSelection()
             repository.createPlaylist(playlistName = name, musicIds = musicIdList)
             fetchAllPlaylists()
-            clearSelection()
         }
     }
 
