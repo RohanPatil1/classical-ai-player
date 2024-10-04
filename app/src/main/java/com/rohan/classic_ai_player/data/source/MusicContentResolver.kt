@@ -7,15 +7,11 @@ import android.provider.MediaStore
 import androidx.annotation.WorkerThread
 import com.rohan.classic_ai_player.data.model.Music
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
-
 class MusicContentResolver @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
-    private val musicList = MutableStateFlow(mutableListOf<Music>())
     private var cursor: Cursor? = null
-
 
     private val projection = arrayOf(
         MediaStore.Audio.AudioColumns.DISPLAY_NAME,
@@ -25,10 +21,14 @@ class MusicContentResolver @Inject constructor(
         MediaStore.Audio.AudioColumns._ID,
         MediaStore.Audio.AudioColumns.ALBUM_ID,
         MediaStore.Audio.AudioColumns.DISPLAY_NAME,
+        MediaStore.Audio.AudioColumns.MIME_TYPE // Added MIME_TYPE to projection
     )
 
-    private val selectionClaus = "${MediaStore.Audio.Media.IS_MUSIC} = ?"
-    private val selectionArg = arrayOf("1")
+    // Filter for music files that are mp3 and are marked as music
+    private val selectionClaus =
+        "${MediaStore.Audio.Media.IS_MUSIC} = ? AND ${MediaStore.Audio.AudioColumns.MIME_TYPE} = ?"
+    private val selectionArg =
+        arrayOf("1", "audio/mpeg") // "audio/mpeg" is the MIME type for mp3 files
     private val sortOrder = "${MediaStore.Audio.AudioColumns.DISPLAY_NAME} ASC"
 
     @WorkerThread
@@ -94,23 +94,3 @@ class MusicContentResolver @Inject constructor(
         return musicList
     }
 }
-
-//    @WorkerThread
-//    fun getAlbumArt(context: Context, uri: Uri): Bitmap?{
-//        val mmr = MediaMetadataRetriever()
-//        mmr.setDataSource(context, uri)
-//        val bitmap: Bitmap? = try{
-//            val data = mmr.embeddedPicture
-//            if (data != null){
-//                BitmapFactory.decodeByteArray(data, 0, data.size)
-//            } else{
-//                null
-//            }
-//        } catch (exp: Exception){
-//            null
-//        } finally {
-//            mmr.release()
-//        }
-//        return bitmap
-//    }
-

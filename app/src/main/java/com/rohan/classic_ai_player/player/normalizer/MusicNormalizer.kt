@@ -58,11 +58,7 @@ class MusicNormalizer @Inject constructor(@ApplicationContext val context: Conte
     }
 
 
-    fun getAudioGain(audioStats: AudioStats): Float {
-        return calculateDynamicGain(audioStats)
-    }
-
-    fun getFilePathFromUri(context: Context, contentUri: Uri): String? {
+    private fun getFilePathFromUri(context: Context, contentUri: Uri): String? {
         val fileDescriptor =
             context.contentResolver.openFileDescriptor(contentUri, "r") ?: return null
         val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
@@ -73,7 +69,7 @@ class MusicNormalizer @Inject constructor(@ApplicationContext val context: Conte
         inputStream.copyTo(outputStream)
         inputStream.close()
         outputStream.close()
-
+        fileDescriptor.close()
         return tempFile.absolutePath
     }
 }

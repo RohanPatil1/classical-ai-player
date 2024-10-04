@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.util.UnstableApi
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionStatus
 import com.google.accompanist.permissions.rememberPermissionState
@@ -42,12 +42,13 @@ import com.rohan.classic_ai_player.ui.theme.ClassicAIPlayerTheme
 import com.rohan.classic_ai_player.ui.view_model.MusicViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
+@UnstableApi
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val musicViewModel: MusicViewModel by viewModels()
 
-    @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
+    @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

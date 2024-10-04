@@ -1,4 +1,4 @@
-package com.rohan.classic_ai_player.ui.screens
+package com.rohan.classic_ai_player.ui.compose_widgets
 
 import android.annotation.SuppressLint
 import androidx.compose.animation.AnimatedVisibility
@@ -56,7 +56,6 @@ import androidx.media3.common.util.UnstableApi
 import coil.compose.AsyncImage
 import com.rohan.classic_ai_player.R
 import com.rohan.classic_ai_player.data.model.Music
-import com.rohan.classic_ai_player.ui.compose_widgets.ClassicAppBar
 import com.rohan.classic_ai_player.ui.view_model.MusicViewModel
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
@@ -89,17 +88,21 @@ fun PlayerBottomSheet(
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                PlayerTopContent(
+
+                /// music album art, name, artist text
+                PlayerContentDetails(
                     audio = music!!,
                     sheetScaffoldState = sheetScaffoldState
                 )
 
-                PlayerCenterControls(
+                /// shows the progress of playing music
+                PlayerProgress(
                     totalDuration = totalDuration.toLong(),
                     onChange = onSeekChange,
                     viewModel = viewModel,
                 )
-                PlayerBottomControls(
+
+                PlayerPlaybackControls(
                     previous = {
                         previous()
                     },
@@ -112,10 +115,10 @@ fun PlayerBottomSheet(
             }
             AnimatedVisibility(
                 visible = sheetScaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
-                enter = slideInVertically(animationSpec = tween(500), initialOffsetY = { -it }),
-                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { -it })
+                enter = slideInVertically(animationSpec = tween(300), initialOffsetY = { -it }),
+                exit = slideOutVertically(animationSpec = tween(300), targetOffsetY = { -it })
             ) {
-                PlayerBottomBar(
+                PlayerPlayingBar(
                     audio = music!!,
                     playPause = playPause,
                     next = next,
@@ -125,18 +128,17 @@ fun PlayerBottomSheet(
             }
         }
     } else {
-        Box() {}
+        Box {}
     }
 }
 
 
 @ExperimentalMaterial3Api
 @Composable
-fun PlayerTopContent(
+fun PlayerContentDetails(
     audio: Music,
     sheetScaffoldState: BottomSheetScaffoldState,
 ) {
-
     val painterState = remember(audio) { mutableStateOf(PainterState.LOADING) }
 
     Box(
@@ -208,7 +210,7 @@ fun PlayerTopContent(
 @OptIn(ExperimentalMaterial3Api::class)
 @UnstableApi
 @Composable
-fun PlayerCenterControls(
+fun PlayerProgress(
     totalDuration: Long,
     onChange: (Float) -> Unit,
     viewModel: MusicViewModel,
@@ -285,7 +287,7 @@ fun PlayerCenterControls(
 
 @UnstableApi
 @Composable
-fun PlayerBottomControls(
+fun PlayerPlaybackControls(
     previous: () -> Unit,
     next: () -> Unit,
     playPause: () -> Unit,
@@ -312,11 +314,6 @@ fun PlayerBottomControls(
                 .size(70.dp)
                 .clip(CircleShape)
                 .clickable {
-//                    if (progress.value.toLong() == totalDuration) {
-//                        viewModel.onPlayerUiChanged(PlayerUiEvents.SeekTo(0f))
-//                    } else {
-//                        playPause()
-//                    }
                     playPause()
                 },
             shape = CircleShape,
@@ -345,7 +342,7 @@ fun PlayerBottomControls(
 @UnstableApi
 @ExperimentalMaterial3Api
 @Composable
-fun PlayerBottomBar(
+fun PlayerPlayingBar(
     audio: Music,
     playPause: () -> Unit,
     next: () -> Unit,
@@ -477,32 +474,3 @@ enum class PainterState {
     ERROR,
     SUCCESS
 }
-//@ExperimentalMaterial3Api
-//@UnstableApi
-//@Preview(showBackground = true)
-//@Composable
-//fun PlayerPreview() {
-//    val audio = Music(
-//        musicId = 0L,
-//        duration = 12000,
-//        audioStats = null,
-//        contentUri = Uri.EMPTY,
-//        artistName = "",
-//        albumName = "",
-//        songName = "Dummy Name"
-//    )
-//
-//    PlayerContent(
-//        audio = audio,
-//        previous = { },
-//        next = { },
-//        playPause = { },
-//        duration = 90L,
-//        onSeekChange = { },
-//        onIndexChange = { },
-//        totalDuration = 100L,
-//        isPlaying = false,
-//        sheetScaffoldState = rememberBottomSheetScaffoldState(),
-//        viewModel = hiltViewModel()
-//    )
-//}
