@@ -26,13 +26,11 @@ class MusicPlayerHandler(
     private val musicNormalizer: MusicNormalizer,
 ) : Player.Listener {
 
-
-
+    private val job: Job? = null
     private val _musicPlayerState = MutableStateFlow<MusicState>(MusicState.Idle)
     val musicPlayerState = _musicPlayerState.asStateFlow()
     private val loudnessEnhancer = LoudnessEnhancer(exoPlayer.audioSessionId)
 
-    private val job: Job? = null
 
     init {
         exoPlayer.addListener(this)
@@ -43,13 +41,7 @@ class MusicPlayerHandler(
         val gain = music.audioStats?.let { musicNormalizer.calculateDynamicGain(it) } ?: 0f
         loudnessEnhancer.setTargetGain(gain.toInt())
     }
-//    override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-//        mediaItem?.let {
-//            val currentMusic = playlist[player.currentMediaItemIndex]
-//            applyNormalization(currentMusic)
-//        }
-//        super.onMediaItemTransition(mediaItem, reason)
-//    }
+
 
     override fun onPlaybackStateChanged(playbackState: Int) {
 

@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class)
+
 package com.rohan.classic_ai_player.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -6,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,7 +37,6 @@ import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,13 +45,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import com.rohan.classic_ai_player.data.model.Playlist
-import com.rohan.classic_ai_player.ui.compose_widgets.AudioCardItem
 import com.rohan.classic_ai_player.ui.compose_widgets.PlaylistSelectionDialog
 import com.rohan.classic_ai_player.ui.view_model.MusicViewModel
-import com.rohan.classic_ai_player.ui.view_model.UIState
 import com.rohan.classic_ai_player.utils.PlayerUiEvents
 
 @androidx.annotation.OptIn(UnstableApi::class)
@@ -61,166 +60,93 @@ fun HomeScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     val tabs = listOf("Songs", "Playlists")
-    val uiState by viewModel.uiState.observeAsState(UIState.Loading)
+    val isLoading by viewModel.isLoading.collectAsState()
     val sheetState = rememberBottomSheetScaffoldState()
     var currMusicIndex by remember { mutableIntStateOf(0) }
-    when (uiState) {
-        is UIState.Success -> {
 
-
-            BottomSheetScaffold(
-                topBar = {
-                    TopAppBar(
-                        title = { Text("Classic App bar") }
-                    )
-                },
-                modifier = Modifier.fillMaxSize(),
-                containerColor = MaterialTheme.colorScheme.background,
-                sheetContent = {
-                    PlayerBottomSheet(
-                        previous = {
-                            currMusicIndex -= 1
-                            viewModel.onPlayerUiChanged(
-                                PlayerUiEvents.SelectedAudioChange(
-                                    currMusicIndex
-                                )
+    if (!isLoading) {
+        BottomSheetScaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Classic App bar") }
+                )
+            },
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            sheetContent = {
+                PlayerBottomSheet(
+                    previous = {
+                        currMusicIndex -= 1
+                        viewModel.onPlayerUiChanged(
+                            PlayerUiEvents.SelectedAudioChange(
+                                currMusicIndex
                             )
-                        },
-                        next = {
-                            currMusicIndex += 1
-                            viewModel.onPlayerUiChanged(
-                                PlayerUiEvents.SelectedAudioChange(
-                                    currMusicIndex
-                                )
+                        )
+                    },
+                    next = {
+                        currMusicIndex += 1
+                        viewModel.onPlayerUiChanged(
+                            PlayerUiEvents.SelectedAudioChange(
+                                currMusicIndex
                             )
-                        },
-                        playPause = { viewModel.onPlayerUiChanged(PlayerUiEvents.PlayPause) },
-                        onSeekChange = {
-                            viewModel.onPlayerUiChanged(
-                                PlayerUiEvents.UpdateProgress(
-                                    it
-                                )
+                        )
+                    },
+                    playPause = { viewModel.onPlayerUiChanged(PlayerUiEvents.PlayPause) },
+                    onSeekChange = {
+                        viewModel.onPlayerUiChanged(
+                            PlayerUiEvents.UpdateProgress(
+                                it
                             )
-                        },
-                        sheetScaffoldState = sheetState,
-                        viewModel = viewModel
-                    )
-                },
-                scaffoldState = sheetState,
-                sheetPeekHeight = 100.dp,
-                sheetDragHandle = { }
-            ) { innerPadding ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                ) {
-                    TabRow(selectedTabIndex = selectedTabIndex) {
-                        tabs.forEachIndexed { index, title ->
-                            Tab(
-                                text = { Text(title) },
-                                selected = selectedTabIndex == index,
-                                onClick = {
-                                    selectedTabIndex = index
-                                    if (index == 0) {
-                                        // Go to Songs Screen
-                                        viewModel.resetPlaylistSelection()
-                                    }
+                        )
+                    },
+                    sheetScaffoldState = sheetState,
+                    viewModel = viewModel
+                )
+            },
+            scaffoldState = sheetState,
+            sheetPeekHeight = 100.dp,
+            sheetDragHandle = { }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                TabRow(selectedTabIndex = selectedTabIndex) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            text = { Text(title) },
+                            selected = selectedTabIndex == index,
+                            onClick = {
+                                selectedTabIndex = index
+                                if (index == 0) {
+                                    // Go to Songs Screen
+                                    viewModel.resetPlaylistSelection()
                                 }
-                            )
-                        }
+                            }
+                        )
+                    }
+                }
+
+                when (selectedTabIndex) {
+                    0 -> MusicListScreen(viewModel) {
+                        currMusicIndex = it
+                        viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
                     }
 
-                    when (selectedTabIndex) {
-                        0 -> MusicListScreen(viewModel) {
-                            currMusicIndex = it
-                            viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
-                        }
-
-                        1 -> PlaylistScreen(viewModel) {
-                            currMusicIndex = it
-                            viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
-                        }
+                    1 -> PlaylistScreen(viewModel) {
+                        currMusicIndex = it
+                        viewModel.onPlayerUiChanged(PlayerUiEvents.SelectedAudioChange(it))
                     }
                 }
             }
         }
-
-        else -> {}
-    }
-
-
-//    Scaffold(
-//        topBar = {
-//            TopAppBar(
-//                title = { Text("Music App") },
-//            )
-//        },
-//    ) { innerPadding ->
-//        Column(
-//            modifier = Modifier
-//                .fillMaxSize()
-//                .padding(innerPadding)
-//        ) {
-//            TabRow(selectedTabIndex = selectedTabIndex) {
-//                tabs.forEachIndexed { index, title ->
-//                    Tab(
-//                        text = { Text(title) },
-//                        selected = selectedTabIndex == index,
-//                        onClick = { selectedTabIndex = index }
-//                    )
-//                }
-//            }
-//
-//            when (selectedTabIndex) {
-//                0 -> SongsScreen(viewModel)
-//                1 -> PlaylistScreen(viewModel)
-//            }
-//        }
-//    }
-}
-
-@androidx.annotation.OptIn(UnstableApi::class)
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SongsScreen(
-    viewModel: MusicViewModel = hiltViewModel<MusicViewModel>(),
-    mediaItemList: MutableList<MediaItem>,
-    selectedIndex: (Int) -> Unit,
-) {
-    val appCurrentPlayList by viewModel.appCurrentPlayList.collectAsState()
-    val uiState by viewModel.uiState.observeAsState(UIState.Loading)
-
-
-    when (uiState) {
-        is UIState.Loading -> CircularProgressIndicator()
-        is UIState.Success -> {
-
-            LazyColumn {
-                itemsIndexed(appCurrentPlayList) { index, music ->
-                    AudioCardItem(
-                        music = music,
-                        viewModel = viewModel,
-                        mediaItemList = mediaItemList,
-                        selectedIndex = index,
-                        selectedTrack = {
-                            selectedIndex(index)
-                        }
-                    )
-
-                }
-            }
-
-        }
-
-        is UIState.Error -> {
-            val errorMessage = (uiState as UIState.Error).message
-            Text(text = errorMessage)
-        }
+    } else {
+        CircularProgressIndicator()
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@UnstableApi
 @Composable
 fun MusicListScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
     val musicList by viewModel.appCurrentPlayList.collectAsState()
@@ -235,6 +161,7 @@ fun MusicListScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+
                     IconButton(onClick = { viewModel.clearSelection() }) {
                         Icon(Icons.Default.Close, contentDescription = "Clear selection")
                     }
@@ -280,24 +207,9 @@ fun MusicListScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
     }
 }
 
-//@Composable
-//fun SongItem(music: Music, isPlaying: Boolean, onClick: () -> Unit) {
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .clickable { onClick() }
-//            .padding(16.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        Text(music.songName, modifier = Modifier.weight(1f))
-//        Icon(
-//            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-//            contentDescription = null
-//        )
-//    }
-//}
 
-
+@UnstableApi
+@androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun PlaylistScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
     val playlists by viewModel.playlists.collectAsState()
@@ -347,11 +259,7 @@ fun PlaylistScreen(viewModel: MusicViewModel, selectedIndex: (Int) -> Unit) {
                 }
             }
         }
-
-
     }
-
-
 }
 
 

@@ -3,11 +3,8 @@
 package com.rohan.classic_ai_player.ui.view_model
 
 import android.annotation.SuppressLint
-import android.net.Uri
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -44,23 +41,12 @@ class MusicViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    val musicDummy = Music(
-        musicId = 0L,
-        albumArt = Uri.EMPTY,
-        contentUri = Uri.EMPTY,
-        songName = "",
-        artistName = "",
-        duration = 0,
-        title = ""
-    )
 
-    val playlistDummy = Playlist(playlistName = "", musicIds = emptyList())
     private val musicPlayerHandler: MusicPlayerHandler =
         MusicPlayerHandler(exoPlayer, viewModelScope, musicNormalizer)
 
     private val _appCurrentPlayList = MutableStateFlow<List<Music>>(listOf())
     val appCurrentPlayList = _appCurrentPlayList.asStateFlow()
-
 
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists = _playlists.asStateFlow()
@@ -68,19 +54,19 @@ class MusicViewModel @Inject constructor(
     private val _progress = MutableStateFlow<Float>(0f)
     val progress = _progress.asStateFlow()
 
-    private val _uiState = MutableLiveData<UIState>()
-    val uiState: LiveData<UIState> = _uiState
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading = _isLoading.asStateFlow()
 
     var duration by savedStateHandle.saveable { mutableLongStateOf(0L) }
     var progressString by savedStateHandle.saveable { mutableStateOf("00:00") }
 
-    private val _currSelectedMusic = MutableStateFlow<Music>(musicDummy)
+    private val _currSelectedMusic = MutableStateFlow<Music?>(null)
     val currSelectedMusic = _currSelectedMusic.asStateFlow()
 
     private val _currSelectedPlaylistMusic = MutableStateFlow<List<Music>>(emptyList())
     val currSelectedPlaylistMusic = _currSelectedPlaylistMusic.asStateFlow()
 
-    private val _isPlaying = MutableStateFlow<Boolean>(false)
+    private val _isPlaying = MutableStateFlow(false)
     val isPlaying = _isPlaying.asStateFlow()
 
     private val _selectedMusicIds = MutableStateFlow<Set<Long>>(emptySet())
@@ -106,29 +92,21 @@ class MusicViewModel @Inject constructor(
     }
 
     private fun fetchMusicList() {
-        _uiState.value = UIState.Loading
+        _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            when (val dataResult = repository.getAllMusic()) {
-                is DataResult.Success -> {
 
-                    _appCurrentPlayList.value = dataResult.data
-                    _uiState.postValue(UIState.Success(data = dataResult.data))
-                    isMusicListLoaded = _appCurrentPlayList.value.isNotEmpty()
+            val dataResult = repository.getAllMusic()
+            _appCurrentPlayList.value = dataResult
 
-                    withContext(Dispatchers.Main) {
-                        setMediaItemList(_appCurrentPlayList.value)
+            isMusicListLoaded = _appCurrentPlayList.value.isNotEmpty()
+            _isLoading.value = false
+            withContext(Dispatchers.Main) {
+                setMediaItemList(_appCurrentPlayList.value)
 
-                        if (isMusicListLoaded) _currSelectedMusic.value = dataResult.data[0]
-                    }
-                    println("VM POSTED VALUE")
-                }
+                if (isMusicListLoaded) _currSelectedMusic.value = dataResult[0]
 
-                is DataResult.Error -> {
-                    _uiState.postValue(dataResult.exception.message?.let { UIState.Error(it) })
-                }
-
-                else -> {}
             }
+            println("VM POSTED VALUE")
         }
     }
 
@@ -173,7 +151,7 @@ class MusicViewModel @Inject constructor(
     fun onPlayerUiChanged(uiEvents: PlayerUiEvents) = viewModelScope.launch {
         when (uiEvents) {
             PlayerUiEvents.Backward -> {
-//                musicPlayerHandler.handlePlayerState(ZPlayerState.Backward)
+                //musicPlayerHandler.handlePlayerState(ZPlayerState.Backward)
             }
             PlayerUiEvents.Forward -> musicPlayerHandler.handlePlayerState(ZPlayerState.Forward)
             PlayerUiEvents.SeekToNext -> {
@@ -202,7 +180,7 @@ class MusicViewModel @Inject constructor(
                     n = appCurrentPlayList.value.size
                     _currSelectedMusic.value = appCurrentPlayList.value[uiEvents.index % n]
                 }
-                musicPlayerHandler.applyNormalization(_currSelectedMusic.value)
+                currSelectedMusic.value?.let { musicPlayerHandler.applyNormalization(it) }
                 musicPlayerHandler.handlePlayerState(
                     ZPlayerState.SelectedMusicChange,
                     selectedMediaIndex = uiEvents.index % n
@@ -228,8 +206,6 @@ class MusicViewModel @Inject constructor(
             else 0f
         progressString = formatDuration(currentProgress)
 
-        println("PROGRESS VM: ${_progress.value}")
-        println("TOTAL DURATION VM: ${currSelectedMusic.value.duration}")
     }
 
     @SuppressLint("DefaultLocale")
@@ -540,12 +516,6 @@ class MusicViewModel @Inject constructor(
 //    }
 //
 
-
-sealed class UIState {
-    object Loading : UIState()
-    data class Success(val data: List<Music>) : UIState()
-    data class Error(val message: String) : UIState()
-}
 
 //
 //sealed class UIState {

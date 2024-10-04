@@ -17,26 +17,21 @@ class MusicRepository @Inject constructor(
     private val musicNormalizer: MusicNormalizer,
 ) {
 
-    suspend fun getAllMusic(): DataResult<List<Music>> {
-        return try {
-            val cachedMusicList = musicDao.getAllMusic()
-            if (cachedMusicList.isNullOrEmpty()) {
-                println("FRESH START")
+    suspend fun getAllMusic(): List<Music> {
+        val cachedMusicList = musicDao.getAllMusic()
+        if (cachedMusicList.isNullOrEmpty()) {
+            println("FRESH START")
 
-                // fresh start
-                val musicListContentResolver = musicContentResolver.fetchMusicList()
-                insertAll(musicListContentResolver)
-                println("FRESH DATA SENT")
-                DataResult.Success(musicListContentResolver)
-            } else {
-                println("GIVING THE CACHED LIST")
+            // fresh start
+            val musicListContentResolver = musicContentResolver.fetchMusicList()
+            insertAll(musicListContentResolver)
+            println("FRESH DATA SENT")
+            return musicListContentResolver
+        } else {
+            println("GIVING THE CACHED LIST")
 
-                // return the cached list
-                DataResult.Success(cachedMusicList)
-            }
-        } catch (e: Exception) {
-            Log.d(TAG, e.message.toString())
-            DataResult.Error(e)
+            // return the cached list
+            return cachedMusicList
         }
     }
 
@@ -62,7 +57,7 @@ class MusicRepository @Inject constructor(
     private suspend fun normalizeMusicList(musicIds: List<Long>) {
         musicIds.forEach { id ->
             val currMusic = musicDao.getMusicById(id)
-            currMusic?.contentUri?.path?.let {
+            currMusic?.contentUri?.let {
                 val audioStat = musicNormalizer.analyzeAudio(it)
                 musicDao.updateAudioStats(currMusic.musicId, audioStat)
             }

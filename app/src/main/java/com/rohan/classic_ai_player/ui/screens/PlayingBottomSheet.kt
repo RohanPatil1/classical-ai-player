@@ -73,59 +73,59 @@ fun PlayerBottomSheet(
     sheetScaffoldState: BottomSheetScaffoldState,
     viewModel: MusicViewModel,
 ) {
-    val audio by viewModel.currSelectedMusic.collectAsState()
+    val music by viewModel.currSelectedMusic.collectAsState()
     var totalDuration by remember { mutableIntStateOf(0) }
-    LaunchedEffect(audio) {
-        totalDuration = audio.duration
+    LaunchedEffect(music) {
+        totalDuration = music?.duration ?: 0
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        Column(
+    if (music != null) {
+        Box(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+            contentAlignment = Alignment.TopCenter
         ) {
-            PlayerTopContent(
-                audio = audio,
-                sheetScaffoldState = sheetScaffoldState
-            )
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PlayerTopContent(
+                    audio = music!!,
+                    sheetScaffoldState = sheetScaffoldState
+                )
 
-            PlayerCenterControls(
-                totalDuration = totalDuration.toLong(),
-                onChange = onSeekChange,
-                viewModel = viewModel,
-            )
-            PlayerBottomControls(
-                previous = {
-                    previous()
-                    //onIndexChange(viewModel.mExoPlayer.currentMediaItemIndex)
-                },
-                next = {
-                    next()
-                    //onIndexChange(viewModel.mExoPlayer.currentMediaItemIndex)
-                },
-                playPause = playPause,
-                totalDuration = totalDuration.toLong(),
-                viewModel = viewModel
-            )
+                PlayerCenterControls(
+                    totalDuration = totalDuration.toLong(),
+                    onChange = onSeekChange,
+                    viewModel = viewModel,
+                )
+                PlayerBottomControls(
+                    previous = {
+                        previous()
+                    },
+                    next = {
+                        next()
+                    },
+                    playPause = playPause,
+                    viewModel = viewModel
+                )
+            }
+            AnimatedVisibility(
+                visible = sheetScaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
+                enter = slideInVertically(animationSpec = tween(500), initialOffsetY = { -it }),
+                exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { -it })
+            ) {
+                PlayerBottomBar(
+                    audio = music!!,
+                    playPause = playPause,
+                    next = next,
+                    sheetScaffoldState = sheetScaffoldState,
+                    viewModel = viewModel,
+                )
+            }
         }
-        AnimatedVisibility(
-            visible = sheetScaffoldState.bottomSheetState.currentValue == SheetValue.PartiallyExpanded,
-            enter = slideInVertically(animationSpec = tween(500), initialOffsetY = { -it }),
-            exit = slideOutVertically(animationSpec = tween(500), targetOffsetY = { -it })
-        ) {
-            PlayerBottomBar(
-                audio = audio,
-                playPause = playPause,
-                next = next,
-                sheetScaffoldState = sheetScaffoldState,
-                viewModel = viewModel,
-                totalDuration = totalDuration.toLong()
-            )
-        }
+    } else {
+        Box() {}
     }
 }
 
@@ -289,7 +289,6 @@ fun PlayerBottomControls(
     previous: () -> Unit,
     next: () -> Unit,
     playPause: () -> Unit,
-    totalDuration: Long,
     viewModel: MusicViewModel,
 ) {
 
@@ -343,6 +342,7 @@ fun PlayerBottomControls(
     }
 }
 
+@UnstableApi
 @ExperimentalMaterial3Api
 @Composable
 fun PlayerBottomBar(
@@ -351,7 +351,6 @@ fun PlayerBottomBar(
     next: () -> Unit,
     sheetScaffoldState: BottomSheetScaffoldState,
     viewModel: MusicViewModel,
-    totalDuration: Long,
 ) {
     val scope = rememberCoroutineScope()
     val painterState = remember(audio) { mutableStateOf(PainterState.LOADING) }
@@ -370,36 +369,36 @@ fun PlayerBottomBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-//            Box(
-//                modifier = Modifier.fillMaxHeight(),
-//                contentAlignment = Alignment.Center
-//            ) {
-//                when (painterState.value) {
-//                    PainterState.SUCCESS, PainterState.LOADING -> {
-//                        AsyncImage(
-//                            modifier = Modifier
-//                                .size(50.dp)
-//                                .clip(RoundedCornerShape(10.dp)),
-//                            model = mAudio.value.albumArt,
-//                            contentDescription = audio.songName,
-//                            contentScale = ContentScale.FillBounds,
-//                            onError = { painterState.value = PainterState.ERROR },
-//                            onLoading = { painterState.value = PainterState.LOADING }
-//                        )
-//                    }
-//
-//                    PainterState.ERROR -> {
-//                        Icon(
-//                            painter = painterResource(id = R.drawable.music),
-//                            contentDescription = "Album Art",
-//                            modifier = Modifier
-//                                .scale(0.6f)
-//                                .height(44.dp)
-//                                .width(50.dp)
-//                        )
-//                    }
-//                }
-//            }
+            Box(
+                modifier = Modifier.fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                when (painterState.value) {
+                    PainterState.SUCCESS, PainterState.LOADING -> {
+                        AsyncImage(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(RoundedCornerShape(10.dp)),
+                            model = audio.albumArt,
+                            contentDescription = audio.songName,
+                            contentScale = ContentScale.FillBounds,
+                            onError = { painterState.value = PainterState.ERROR },
+                            onLoading = { painterState.value = PainterState.LOADING }
+                        )
+                    }
+
+                    PainterState.ERROR -> {
+                        Icon(
+                            painter = painterResource(id = R.drawable.music),
+                            contentDescription = "Album Art",
+                            modifier = Modifier
+                                .scale(0.6f)
+                                .height(44.dp)
+                                .width(50.dp)
+                        )
+                    }
+                }
+            }
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
